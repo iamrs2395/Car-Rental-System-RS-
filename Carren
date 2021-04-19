@@ -1,0 +1,776 @@
+import pymysql as pq
+import sys
+class CarRen:
+    def __init__(self):#This initializes Connection with database
+        self.__servername='localhost'
+        self.__uname='root'
+        self.__password=''
+        self.__dbname='carrental'
+        try:
+            self.con=pq.connect(self.__servername,self.__uname,self.__password,self.__dbname)
+            self.con1=pq.connect(self.__servername,self.__uname,self.__password,self.__dbname)
+            self.con2=pq.connect(self.__servername,self.__uname,self.__password,self.__dbname)
+            print('************************************************************************************************')
+            print("Connection Successfull...Initialized Successfully")
+            print('************************************************************************************************')
+        except:
+            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+            print("Something went wrong in init, conection creation")
+            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+            print('EXITING PROGRAM.......')
+            sys.exit()
+
+    def addCustomer(self):# This adds Customer to the database
+        qry='SELECT FullName FROM customerdet'
+        qry1='SELECT MAX(CustId)+1 AS CUSTID FROM customerdet'
+        cur=self.con.cursor()
+        cur1=self.con.cursor()
+        rslt=()
+        ckey=()
+        try:
+            cur.execute(qry)
+            cur1.execute(qry1)
+            rslt=cur.fetchall()
+            ckey=cur1.fetchall()
+        except:
+            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+            print('Error in Select qry addCustomer')
+            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+            print('EXITING PROGRAM.......')
+            sys.exit()
+        #print('Name:',rslt[0][0])
+        #print('Custid:',ckey[0][0])
+        chkexst=str(rslt[0])
+        print('------------------------------------------------------------------------------------------------')
+        print('Hello there, we now are gonna ask you little details of yours, for us to give you better service')
+        print('------------------------------------------------------------------------------------------------')
+        Fname=input('Enter your Full Name in Block Letters:')
+        tmp=Fname
+        existflg=False
+        addr=input('Enter your current address:')
+        contact=input('Enter your Contact No:')
+        print('Note: Password should be maximum of 20 characters and minimum of 8 character only')
+        pw=''
+        pw1='.'
+        while(True):
+            print('------------------------------------------------------------------------------------------------')
+            pw=input('Enter password:')
+            pw1=input('Re-Enter password:')
+            print('------------------------------------------------------------------------------------------------')
+            if(pw==pw1):
+                break
+            else:
+                print('Password did not match, Please re-enter')
+                continue
+        for i in chkexst:
+            if(i[0].replace(" ","").upper==tmp.replace(" ","").upper()):
+                existflg=True
+                break
+            else:
+                continue
+        if(existflg==True):# if customer already exist then direct to booking
+            print('------------------------------------------------------------------------------------------------')
+            print('Your details already exist.')
+            print('------------------------------------------------------------------------------------------------')
+            self.showCustomer()
+            print('Kindly Look for your details in the above and take a note of your Customer Id')
+            print('------------------------------------------------------------------------------------------------')
+            while(True):
+                print("Do you want Book or Rent Car? 'Y' for YES 'N' for NO")
+                ch=input('Enter your choice:')
+                if(ch=='Y'):
+                    ky=input('Enter Your Customer Id:')
+                    self.bookCars(ky)
+                    break
+                elif(ch=='N'):
+                    break
+                else:
+                    print('Invalid Choice:')
+                    continue
+            print('------------------------------------------------------------------------------------------------')
+                    
+            
+            #Go to exist
+        else:# else the customer is created
+            ckey=str(ckey[0][0])
+            qry2='INSERT INTO customerdet(CustId,FullName,Address,Contact,pass)VALUES(%s,%s,%s,%s,%s)'
+            vals=(ckey,Fname,addr,contact,pw)
+            cur2=self.con.cursor()
+            try:
+                cur2.execute(qry2,vals)
+                print('************************************************************************************************')
+                print("Record Inserted Successfully")
+                print('************************************************************************************************')
+            except:
+                print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                print("Something went wrong in addcustomer, Insert")
+                print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                print('EXITING PROGRAM.......')
+                sys.exit()
+            self.con.commit()
+            print('Please take some time and note down your Customer Id:',ckey)
+            print('------------------------------------------------------------------------------------------------')
+
+    def updCustomer(self):#code to update customer details 
+        print('------------------------------------------------------------------------------------------------')
+        print('Re-Enter Full Name, Address, Contact for your assigned Customer Id')
+        print('------------------------------------------------------------------------------------------------')
+        self.showCustomer()
+        print('------------------------------------------------------------------------------------------------')
+        #ckey=input('Type your Customer Id matched in the above list:')
+        while(True):
+            ckey=input('Type your Customer Id matched in the above list:')
+            qry= 'SELECT * FROM customerdet WHERE CustId=%s'
+            cur=self.con.cursor()
+            rslt=()
+            try:
+                cur.execute(qry,ckey)
+                rslt=cur.fetchall()
+            except:
+                print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                print('Something went wrong in updcustomer select qry')
+                print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                print('EXITING PROGRAM.......')
+                sys.exit()
+            if(len(rslt)==0):
+                print('No record found for the passed Customer Id ',ckey)
+                print('Please enter valid Customer Id')
+                continue
+                #show meth
+            else:
+                fullnm=input('Re-Enter Full Name:')
+                addrs=input('Re-Enter Address:')
+                cont=input('Re-Enter Contact No:')
+                qry1='UPDATE customerdet SET FullName=%s,Address=%s,Contact=%s WHERE CustId=%s'
+                val=(fullnm,addrs,cont,ckey)
+                cur1=self.con.cursor()
+                try:
+                    cur1.execute(qry1,val)
+                    print('************************************************************************************************')
+                    print('Updated successfully')
+                    print('************************************************************************************************')      
+                except:
+                    print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                    print('Something went wrong in updCustomer Update')
+                    print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                    print('EXITING PROGRAM.......')
+                    sys.exit()
+                self.con.commit()
+                break
+                
+
+    def delCustomer(self):#code to delete customer details
+        self.showCustomer()
+        print('------------------------------------------------------------------------------------------------')
+        print('Enter the Customer Id which you want to delete:')
+        print('------------------------------------------------------------------------------------------------')
+        while(True):
+            ckey=input('Enter the Customer Id:')
+            qry= 'SELECT * FROM customerdet WHERE CustId=%s'
+            cur=self.con.cursor()
+            rslt=()
+            try:
+                cur.execute(qry,ckey)
+                rslt=cur.fetchall()
+            except:
+                print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                print('Something went wrong in delcustomer select qry')
+                print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                print('EXITING PROGRAM.......')
+                sys.exit()
+            if(len(rslt)==0):
+                print('------------------------------------------------------------------------------------------------')
+                print('No record found for the passed CustomerId ',ckey)
+                print('Please Enter correct Customer Id')
+                print('------------------------------------------------------------------------------------------------')
+                continue
+                #show meth
+            else:
+                qry1='DELETE FROM customerdet WHERE CustId=%s'
+                cur1=self.con.cursor()
+                try:
+                    cur1.execute(qry1,ckey)
+                    print('************************************************************************************************')
+                    print('Deleted successfully')
+                    print('************************************************************************************************')
+                except Exception as e:
+                    print(e)
+                    print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                    print('Something went wrong in delCustomer Delete')
+                    print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                    print('EXITING PROGRAM.......')
+                    sys.exit()
+                self.con.commit()
+                break
+
+    def showCustomer(self):#display code to display Customer details
+        print('------------------------------------------------------------------------------------------------')
+        print('Customer Details')
+        print('------------------------------------------------------------------------------------------------')
+        qry='SELECT CustId,FullName,Address,Contact FROM customerdet'
+        cur=self.con.cursor()
+        rslt=()
+        try:
+            cur.execute(qry)
+            rslt=cur.fetchall()
+        except:
+            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+            print('Something went wrong in show Customer select')
+            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+            print('EXITING PROGRAM.......')
+            sys.exit()
+        if(len(rslt)==0):
+            print('No records to show')
+        else:
+            j=0
+            print("Customer Id : Full Name : Address : Contact")
+            for i in rslt:
+                print(i[j],':',i[j+1],':',i[j+2],':',i[j+3])
+            print('------------------------------------------------------------------------------------------------')
+
+    def showCars(self):#display code to display all available cars
+        print('------------------------------------------------------------------------------------------------')
+        print('Car Details')
+        print('------------------------------------------------------------------------------------------------')
+        qry='SELECT * FROM cardetails'
+        cur=self.con.cursor()
+        rslt=()
+        try:
+            cur.execute(qry)
+            rslt=cur.fetchall()
+        except:
+            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+            print('Something went wrong in show Customer select')
+            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+            print('EXITING PROGRAM.......')
+            sys.exit()
+        if(rslt==None):
+            print('------------------------------------------------------------------------------------------------')
+            print('No records to show')
+            print('------------------------------------------------------------------------------------------------')
+        else:
+            j=0
+            print("Car Id : Car Name : Class : Available : Mileage")
+            for i in rslt:
+                print(i[j],':',i[j+1],':',i[j+2],':',i[j+3],':',i[j+4])
+            print('------------------------------------------------------------------------------------------------')
+            
+
+    def adddelCars(self):#admin code to add or delete car entries
+        print('------------------------------------------------------------------------------------------------')
+        print('Add/Delete Car Entries')
+        print('------------------------------------------------------------------------------------------------') 
+        qry = 'SELECT MAX(CarID)+1 AS CARID FROM cardetails'
+        cur=self.con.cursor()
+        rs=()
+        try:
+            cur.execute(qry)
+            rs=cur.fetchall()
+        except:
+            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+            print('Something went wrong in adddelcars keys')
+            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+            print('EXITING PROGRAM.......')
+            sys.exit()
+        ky=int(rs[0][0])      
+        while(True):
+            print('Do you want to Add/Remove Car Entry?')
+            print("'A'---> Add new car")
+            print("'D'---> Remove car")
+            print("'E'---> Exit")
+            print("")
+            choice = input('Enter your choice: ').upper()
+            if(choice=='A'):
+                print('------------------------------------------------------------------------------------------------')
+                print('Adding Cars')
+                print('------------------------------------------------------------------------------------------------')
+                crnm = input('Enter Car Name:')
+                carcl = input('Input Car Class:')
+                cny= input('No of cars brought:')
+                mil = input('Enter Mileage:')
+                print('------------------------------------------------------------------------------------------------')
+                dt=(ky,crnm,carcl,cny,mil)
+                qry1='INSERT INTO cardetails(CarID,CarName,CarClass,CountC,Mileage)VALUES(%s,%s,%s,%s,%s)'
+                cur1=self.con.cursor()
+                try:
+                    cur1.execute(qry1,dt)
+                    print('************************************************************************************************')
+                    print('Inserted Car details successfully')
+                    print('************************************************************************************************')
+                except Exception as e:
+                    #print(e)
+                    print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                    print('Something went wrong in adddelcars insert')
+                    print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                    print('EXITING PROGRAM.......')
+                    sys.exit()
+                self.con.commit()
+                break
+            elif(choice=='D'):
+                print('------------------------------------------------------------------------------------------------')
+                print('Deleting Cars')
+                print('------------------------------------------------------------------------------------------------')
+                self.showCars()
+                print('------------------------------------------------------------------------------------------------')
+                print('Which Car do you want to delete? Note the Car Id')
+                while(True):
+                    ch=input('Enter the Car Id which you want to Delete(Note: This will delete the entire entry)')
+                    if(int(ch)>(ky-1) or int(ch)<0):
+                        print('Invalid Car Id. Enter Id which is shown in table')
+                        continue
+                    else:
+                        break
+                qry2='DELETE FROM cardetails WHERE CarID=%s'
+                cur2=self.con.cursor()
+                try:
+                    cur2.execute(qry2,ch)
+                    print('************************************************************************************************')
+                    print("Delete Successfully Car Id ",ch,".")
+                    print('************************************************************************************************')
+                except:
+                    print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                    print('Something went wrong in adddelcars delete')
+                    print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                    print('EXITING PROGRAM.......')
+                    sys.exit()
+                self.con.commit()
+                break
+
+            elif(choice=='E'):
+                print('------------------------------------------------------------------------------------------------')
+                print('Exiting')
+                print('------------------------------------------------------------------------------------------------')
+                break
+            else:
+                print('Invalid choice')
+                continue
+                
+                    
+        
+    
+    def bookCars(self,custk): #function to book and return car
+        ckey=custk
+        while(True):
+            print('Checking Customer Id.....')
+            print('------------------------------------------------------------------------------------------------')
+            qry= 'SELECT * FROM customerdet WHERE CustId=%s'
+            cur=self.con.cursor()
+            rslt=()
+            try:
+                cur.execute(qry,ckey)
+                rslt=cur.fetchall()
+            except:
+                print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                print('Something went wrong in updcustomer select qry')
+                print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                print('EXITING PROGRAM.......')
+                sys.exit()
+            if(len(rslt)==0):
+                print('Invalid Id, Please enter correct Customer Id:')
+                showCustomer()
+                ckey=input('Enter the correct Customer Id:')
+                continue
+            else:
+                print('Customer found')
+                print('------------------------------------------------------------------------------------------------')
+                break
+                
+            
+        print('------------------------------------------------------------------------------------------------')
+        print('Car Booking')
+        print('------------------------------------------------------------------------------------------------')
+        #print("Hello ",ckey," ,do you want to rent a car or return borrowed one: press 'B' to rent or press 'R' to return")
+        print('Hello, What do you want to do')
+        print("'B'---> Borrow Car")
+        print("'R'---> Return Car")
+        print("'E'---> Exit to Menu")
+        while(True):
+            cho=input('Enter your choice:').upper()
+            if(cho=='B'):#borrow car code
+                self.showCars()
+                print('------------------------------------------------------------------------------------------------')
+                print('Above is the list of cars which are available with us.')
+                print("Once you have choosen the car, please note down its 'Car Id' and 'Name' for registration purpose")
+                print('------------------------------------------------------------------------------------------------')
+                carkey=input('Enter the car id which you noted earlier:')
+                carname=input('Enter the car name which you noted earlier:')
+                custid=ckey
+                q='SELECT CountC FROM cardetails WHERE CarID=%s'
+                qry='SELECT MAX(CurId)+1 AS CuurentId FROM currentlyrent'
+                qry1='SELECT MAX(HiId)+1 AS HistId FROM history'
+                cur=self.con.cursor()
+                cur1=self.con.cursor()
+                c=self.con.cursor()
+                rs=()
+                rs1=()
+                r=()
+                try:
+                    cur.execute(qry)
+                    cur1.execute(qry1)
+                    c.execute(q,carkey)
+                    r=c.fetchall()
+                    rs=cur.fetchall()
+                    rs1=cur1.fetchall()
+                except:
+                    print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                    print('Something went wrong in bookcars select key')
+                    print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                    print('EXITING PROGRAM.......')
+                    sys.exit()
+                currkey=int(rs[0][0])
+                histkey=int(rs1[0][0])
+                carcnt=int(r[0][0])
+                if(carcnt==0):
+                    print('The car is not available right now. Please choose another car:')
+                    break
+                    #print('CurrentlyRent:',currkey)
+                    #print('histkey:',histkey)
+                    #print('car count',carcnt)
+                else:
+                    carcnt=carcnt-1
+                    dura=input('Please enter duration (in days like 1 or 2 days) for which you want the vehicle:')
+                    print('Updating servers please wait ......')
+                    qry2='INSERT INTO currentlyrent(CurId,CCustId,CDuration,CarID)VALUES(%s,%s,%s,%s)'
+                    val2=(currkey,custid,dura,carkey)
+                    qry3='INSERT INTO history(HiId,HCustId,CarNm,Duration,DatePckUp)VALUES(%s,%s,%s,%s,now())'
+                    val3=(histkey,custid,carname,dura)
+                    qry4='UPDATE cardetails SET CountC=%s WHERE CarId=%s'
+                    val4=(carcnt,carkey)
+                    cur2=self.con.cursor()
+                    cur3=self.con1.cursor()               
+                    cur4=self.con2.cursor()
+                    try:
+                        cur2.execute(qry2,val2)
+                        cur3.execute(qry3,val3)
+                        cur4.execute(qry4,val4)
+                        print('************************************************************************************************')
+                        print('Successfully rented. Please enjoy the ride')
+                        print('Thank you for choosing us')
+                        print('************************************************************************************************')
+                    except Exception as e:
+                        #print(e)
+                        print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                        print('Something went wrong in bookcars Update key')
+                        print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                        print('EXITING PROGRAM.......')
+                        sys.exit()
+                    self.con.commit()
+                    self.con1.commit()
+                    self.con2.commit()
+                    break
+            elif(cho=='R'):#return car code
+                while(True):
+                    self.showCars()
+                    print('From the above list which car are you returning. Kindly take a note of its Car Id')
+                    carkey=input('Enter the Car Id which you noted earlier:')
+                    query='SELECT * FROM currentlyrent WHERE CarID=%s'
+                    curs=self.con1.cursor()
+                    rs1=()
+                    try:
+                        curs.execute(query,carkey)
+                        rs1=curs.fetchall()
+                        #print('CarId:',str(len(rs1)),'.')
+                    except:
+                        print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                        print('Something went wrong in Select currentlyrent')
+                        print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                        print('EXITING PROGRAM.......')
+                        sys.exit()
+                    if(len(rs1)==0):
+                        print('Car Id not present in records, Please input correct Car Id')
+                        continue
+                    else:
+                        custid=custk
+                        qry='SELECT CountC FROM cardetails WHERE CarID=%s'
+                        cur=self.con.cursor()
+                        rs=()
+                        try:
+                            cur.execute(qry,carkey)
+                            rs=cur.fetchall()
+                        except:
+                            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                            print('Something went wrong in Select car details')
+                            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                            print('EXITING PROGRAM.......')
+                            sys.exit()
+                        qry1='DELETE FROM currentlyrent WHERE CCustId=%s AND CarID=%s'
+                        val1=(custid,carkey)
+                        carcnt=int(rs[0][0])+1
+                        qry2='UPDATE cardetails SET CountC=%s WHERE CarId=%s'
+                        val2=(carcnt,carkey)
+                        cur1=self.con.cursor()
+                        cur2=self.con1.cursor()
+                        try:
+                            cur1.execute(qry1,val1)
+                            cur2.execute(qry2,val2)
+                            print('************************************************************************************************')
+                            print('Successfully Returned. Thank you for choosing us')
+                            print('************************************************************************************************')                   
+                        except:
+                            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                            print('Something went wrong in book car del,upd')
+                            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+                            print('EXITING PROGRAM.......')
+                            sys.exit()
+                        self.con.commit()
+                        self.con1.commit()
+                        break
+                break
+            elif(cho=='E'):
+                break               
+            else:
+                print('Invalid Choice')
+    def showHist(self):#shows history code, shows record of people to rent cars
+        print('------------------------------------------------------------------------------------------------')
+        print('History Details')
+        print('------------------------------------------------------------------------------------------------')
+        qry='SELECT * FROM history'
+        cur=self.con.cursor()
+        rslt=()
+        try:
+            cur.execute(qry)
+            rslt=cur.fetchall()
+        except:
+            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+            print('Something went wrong in showhist select')
+            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+            print('EXITING PROGRAM.......')
+            sys.exit()
+        if(rslt==None):
+            print('------------------------------------------------------------------------------------------------')
+            print('No records to show')
+            print('------------------------------------------------------------------------------------------------')
+        else:
+            j=0
+            print("H ID : Customer ID : Car Name : Date : Duration")
+            for i in rslt:
+                print(i[j],':',i[j+1],':',i[j+2],':',i[j+3],':',i[j+4])
+            print('------------------------------------------------------------------------------------------------')
+
+    def showCurrentRent(self):# shows currently rented cars
+        print('------------------------------------------------------------------------------------------------')
+        print('History Details')
+        print('------------------------------------------------------------------------------------------------')
+        qry='SELECT * FROM currentlyrent'
+        cur=self.con.cursor()
+        rslt=()
+        try:
+            cur.execute(qry)
+            rslt=cur.fetchall()
+        except:
+            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+            print('Something went wrong in showcurrentrent select')
+            print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
+            print('EXITING PROGRAM.......')
+            sys.exit()
+        if(rslt==None):
+            print('------------------------------------------------------------------------------------------------')
+            print('No records to show')
+            print('------------------------------------------------------------------------------------------------')
+        else:
+            j=0
+            print("ID : Customer ID : Duration : Car Id ")
+            for i in rslt:
+                print(i[j],':',i[j+1],':',i[j+2],':',i[j+3])
+            print('------------------------------------------------------------------------------------------------')
+        
+
+#--------------------------------------------------------------------------------------------------------------------------
+cr=CarRen()
+try:
+    print('------------------------------------------------------------------------------------------------')
+    print('Hello Are you a Customer or Administrator?: ')
+    print('------------------------------------------------------------------------------------------------')
+    ch=input('Press C for Customer: Press A for Administrator:')
+    while(True): #Customer Mode
+        if(ch.upper()=='C'):
+            print('------------------------------------------------------------------------------------------------')
+            print("Are you an Existing Customer ? Press 'Y' for Yes or 'N' for No")
+            print('------------------------------------------------------------------------------------------------')
+            ch1=input('Type your choice:')
+            if(ch1.upper()=='Y'):
+                cr.showCustomer()
+                print('Look for you Customer credentials in the above list and take a note of your Customer Id')
+                while(True):
+                    print('------------------------------------------------------------------------------------------------')
+                    print('********************************')
+                    print('What would you like to do today?:')
+                    print("B->Book/Return a ride PRESS ")
+                    print('U->Update Your Customer Details')                    
+                    print("A->See Available Rides")
+                    print("E->Exit")
+                    print('********************************')
+                    print('------------------------------------------------------------------------------------------------')
+                    ch2=input('Press you choice:').upper()
+                    if(ch2=='B'):
+                        cuskey=input('Enter your Customer Id:')
+                        cr.bookCars(cuskey)
+                        print('------------------------------------------------------------------------------------------------')
+                        print("Do You want to exit or return to choosing screen.")
+                        print("Press 'E' to exit: Press 'C' to continue to selection menu")
+                        print('------------------------------------------------------------------------------------------------')
+                        ch3=input('Enter your choice:')
+                        if(ch3=='E'):
+                            #exit code
+                            sys.exit()
+                        else:
+                            continue
+                    elif(ch2=='U'):
+                        flg=cr.updCustomer()
+                        print("Do You want to exit or return to choosing screen.")
+                        print("Press 'E' to exit: Press 'C' to continue to selection menu")
+                        print('------------------------------------------------------------------------------------------------')
+                        ch3=input('Enter your choice:')
+                        if(ch3=='E'):
+                            #exit code
+                            sys.exit()
+                        else:
+                            continue
+                    elif(ch2=='A'):
+                        cr.showCars()
+                        print('------------------------------------------------------------------------------------------------')
+                        print("Do You want to exit or return to choosing screen.")
+                        print("Press 'E' to exit: Press 'C' to continue to selection menu")
+                        print('------------------------------------------------------------------------------------------------')
+                        ch3=input('Enter your choice:')
+                        if(ch3=='E'):
+                            #exit code
+                            sys.exit()
+                        else:
+                            continue
+                    elif(ch2=='E'):
+                        print('You have choosen to exit... Thank You')
+                        sys.exit()
+                    else:
+                        print('Invalid Choice')
+                        continue
+            else:
+                print('------------------------------------------------------------------------------------------------')
+                print('Adding New Customer')
+                print('------------------------------------------------------------------------------------------------')
+                cr.addCustomer()
+                print('Please check your newly added details')
+                cr.showCustomer()
+                while(True):
+                    print('------------------------------------------------------------------------------------------------')
+                    print('********************************')
+                    print('What would you like to do today?:')
+                    print("B->Book/Return a ride PRESS ")
+                    print('U->Update Your Customer Details')                    
+                    print("A->See Available Rides")
+                    print("E->Exit")
+                    print('********************************')
+                    print('------------------------------------------------------------------------------------------------')
+                    ch2=input('Press you choice:').upper()
+                    if(ch2=='B'):
+                        cuskey=input('Enter your Customer Id:')
+                        cr.bookCars(cuskey)
+                        print('------------------------------------------------------------------------------------------------')
+                        print("Do You want to exit or return to choosing screen.")
+                        print("Press 'E' to exit: Press 'C' to continue to selection menu")
+                        print('------------------------------------------------------------------------------------------------')
+                        ch3=input('Enter your choice:')
+                        if(ch3=='E'):
+                            #exit code
+                            sys.exit()
+                        else:
+                            continue
+                    elif(ch2=='U'):
+                        flg=cr.updCustomer()
+                        print('Customer Details Updated')
+                        print('------------------------------------------------------------------------------------------------')
+                        print("Do You want to exit or return to choosing screen.")
+                        print("Press 'E' to exit: Press 'C' to continue to selection menu")
+                        print('------------------------------------------------------------------------------------------------')
+                        ch3=input('Enter your choice:')
+                        if(ch3=='E'):
+                            #exit code
+                            sys.exit()
+                        else:
+                            continue
+                    elif(ch2=='A'):
+                        cr.showCars()
+                        print('------------------------------------------------------------------------------------------------')
+                        print("Do You want to exit or return to choosing screen.")
+                        print("Press 'E' to exit: Press 'C' to continue to selection menu")
+                        print('------------------------------------------------------------------------------------------------')
+                        ch3=input('Enter your choice:')
+                        if(ch3=='E'):
+                            #exit code
+                            sys.exit()
+                        else:
+                            continue
+                    elif(ch2=='E'):
+                        sys.exit()
+                    else:
+                        print('Invalid Choice')
+                        continue               
+        elif(ch.upper()=='A'): # Adminidtrator Mode
+            print('------------------------------------------------------------------------------------------------')
+            print('Welcome Administrator')
+            print('------------------------------------------------------------------------------------------------')
+            print('What would you like to do today')
+            #print('********************************')
+            #print('AD-> Add or Delete Car details')
+            #print('SC-> Show Car Details')
+            #print('HI-> Show Customer History')
+            #print('CR-> Show Currently Rented')
+            #print('CU-> Show Customer Details')
+            #print('DC-> Delete Customers')
+            #print('EX-> EXIT Admin mode and terminate')
+            #print('Type the Acronym to which action you want to do')
+            #print('********************************')
+            while(True):
+                print('********************************')
+                print('AD-> Add or Delete Car details')
+                print('SC-> Show Car Details')
+                print('HI-> Show Customer History')
+                print('CR-> Show Currently Rented')
+                print('CU-> Show Customer Details')
+                print('DC-> Delete Customers')
+                print('EX-> EXIT Admin mode and terminate')
+                print('Type the Acronym to which action you want to do')
+                print('********************************')
+                chc=input('Enter your choice: ').upper()
+                if(chc=='SC'):
+                    cr.showCars()
+                    continue
+                elif(chc=='AD'):
+                    cr.adddelCars()
+                    continue
+                elif(chc=='SC'):
+                    cr.showCars()
+                    continue
+                elif(chc=='HI'):
+                    cr.showHist()
+                    continue
+                elif(chc=='CR'):
+                    cr.showCurrentRent()
+                    continue
+                elif(chc=='CU'):
+                    cr.showCustomer()
+                    continue
+                elif(chc=='DC'):
+                    cr.delCustomer()
+                    continue
+                elif(chc=='EX'):
+                    break
+                else:
+                    print('Invalid Choice')
+                    continue       
+            sys.exit()
+except Exception as e:
+    print('EXITING PROGRAM.......')
+    print(e)
+    print('Contact system admin for abovve anomly')
+    sys.exit()
+                        
+                        
+                        
+                
+
+                
+                
+            
+            
+        
